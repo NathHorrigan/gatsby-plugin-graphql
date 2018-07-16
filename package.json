@@ -1,7 +1,7 @@
 {
-  "name": "gatsby-source-wagtail",
+  "name": "gatsby-plugin-graphql",
   "version": "1.0.0",
-  "description": "Gatsby source plugin for building websites using Wagtail CMS",
+  "description": "Gatsby plugin for sourcing data from external GraphQl endpoint",
   "main": "index.js",
   "author": "Nathan Horrigan <NathHorrigan@gmail.com>",
   "license": "MIT",
