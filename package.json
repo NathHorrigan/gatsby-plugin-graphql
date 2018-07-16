@@ -1,5 +1,5 @@
 {
-  "name": "gatsby-source-",
+  "name": "gatsby-source-wagtail",
   "version": "1.0.0",
   "description": "Gatsby source plugin for building websites using Wagtail CMS",
   "main": "index.js",
