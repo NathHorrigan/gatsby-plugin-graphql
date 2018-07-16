@@ -15,6 +15,7 @@ Gatsby plugin for sourcing data from external GraphQl endpoints
 
 
 <br />
+
 ## 💾  Installation
 
 NPM:
@@ -28,7 +29,8 @@ yarn add gatsby-plugin-graphql
 ```
 
 <br />
-## ▶️ Usage
+
+## ▶️  Usage
 
 ##### gatsby-config.js:
 ```js
@@ -103,12 +105,14 @@ export const query = graphql`
 
 
 <br />
+
 ## 📝 Todo
 
 - [ ] Authentication
 - [ ] Multiple GraphQl endpoints
 
 <br />
+
 ## 🎓 License
 
 [MIT](http://webpro.mit-license.org/)
