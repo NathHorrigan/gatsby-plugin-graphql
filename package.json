@@ -1,0 +1,23 @@
+{
+  "name": "gatsby-source-",
+  "version": "1.0.0",
+  "description": "Gatsby source plugin for building websites using Wagtail CMS",
+  "main": "index.js",
+  "author": "Nathan Horrigan <NathHorrigan@gmail.com>",
+  "license": "MIT",
+  "scripts": {
+    "build": "babel ./src/gatsby-node.js --out-file gatsby-node.js",
+    "build:watch": "babel ./src/gatsby-node.js --out-file gatsby-node.js --watch",
+    "format": "prettier-standard 'src/**/*.js'"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-plugin-transform-object-rest-spread": "^6.26.0",
+    "babel-preset-env": "^1.7.0",
+    "prettier": "^1.13.7",
+    "prettier-standard": "^8.0.1"
+  },
+  "dependencies": {
+    "graphql-request": "^1.6.0"
+  }
+}
