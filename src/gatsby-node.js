@@ -3,12 +3,24 @@ import fs from 'fs'
 import path from 'path'
 import * as crypto from 'crypto'
 
+fs.readFileAsync = function (filename) {
+  return new Promise(function (resolve, reject) {
+    try {
+      fs.readFile(filename, "utf8", function(err, buffer){
+        if (err) reject(err); else resolve(buffer);
+      });
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
 export const sourceNodes = async (
-  { boundActionCreators, reporter },
+  {boundActionCreators, reporter},
   configOptions
 ) => {
-  const { createNode } = boundActionCreators
-  const { endpoint, queries, recursive } = configOptions
+  const {createNode} = boundActionCreators
+  const {endpoint, queries} = configOptions
   let configs = []
 
   if (!endpoint) {
@@ -25,52 +37,55 @@ export const sourceNodes = async (
   delete configOptions.plugins
 
   return new Promise((resolve, reject) => {
-    configs.map(({ type, path, recursive }) => {
-      getAllFiles(path, recursive).map(file => {
-        fs.readFile(file, 'utf8', async (err, query) => {
-          if (err) {
-            reject(`${file} does not exist`)
-          }
-
-          const result = await request(endpoint, query)
-
-          const content = JSON.stringify(result)
+    configs.map(async ({ type, path, recursive }) => {
+      let data = {}
+      const files = await getAllFiles(path, recursive)
+      if (files) {
+        Promise.all(files.map(file => fs
+          .readFileAsync(file)
+          .then(query => request(endpoint, query)
+              .then(result => {
+                data = {...data, ...result}
+              }))
+          .catch(err => reject(`${file} does not exist`))
+        ))
+        .then(() => {
+          const content = JSON.stringify(data)
           const contentDigest = createContentDigest(content)
-
           const child = {
-            ...result,
+            ...data,
             id: `__graphql__${contentDigest}`,
             parent: null,
             children: [],
             internal: {
-              type,
+              type: 'wagtail',
               content,
               contentDigest
             }
           }
-
           createNode(child)
-          resolve()
         })
-      })
+      }
+      resolve()
     })
   })
 }
 
-export const getAllFiles = (dir, recursive = true) => {
+export const getAllFiles = (dir, recursive = true) => new Promise((resolve, reject) => {
+  let files = []
   if (recursive) {
-    return fs.readdirSync(dir).reduce((files, file) => {
+    files = fs.readdirSync(dir).reduce((files, file) => {
       const name = path.join(dir, file)
       const isDirectory = fs.statSync(name).isDirectory()
       return isDirectory ? [...files, ...getAllFiles(name)] : [...files, name]
     }, [])
   } else {
-    return fs
-      .readdirSync(dir)
+    files = fs.readdirSync(dir)
       .map(file => path.join(dir, file))
       .filter(name => fs.statSync(name).isFile())
   }
-}
+  resolve(files)
+})
 
 const createContentDigest = content =>
   crypto
