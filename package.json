@@ -1,6 +1,6 @@
 {
   "name": "gatsby-plugin-graphql",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Gatsby plugin for sourcing data from external GraphQl endpoint",
   "main": "index.js",
   "author": "Nathan Horrigan <NathHorrigan@gmail.com>",
