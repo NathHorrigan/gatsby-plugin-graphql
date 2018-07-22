@@ -8,7 +8,7 @@ export const sourceNodes = async (
   configOptions
 ) => {
   const { createNode } = boundActionCreators
-  const { endpoint, queries, recursive } = configOptions
+  const { endpoint, queries } = configOptions
   let configs = []
 
   if (!endpoint) {
@@ -25,20 +25,29 @@ export const sourceNodes = async (
   delete configOptions.plugins
 
   return new Promise((resolve, reject) => {
-    configs.map(({ type, path, recursive }) => {
-      getAllFiles(path, recursive).map(file => {
-        fs.readFile(file, 'utf8', async (err, query) => {
-          if (err) {
-            reject(`${file} does not exist`)
-          }
+    configs.map(async ({ type, path, recursive }) => {
+      let data = {}
+      const files = await getAllFiles(path, recursive)
 
-          const result = await request(endpoint, query)
-
-          const content = JSON.stringify(result)
+      if (files) {
+        Promise.all(
+          files.map(file =>
+            fs
+              .readFileAsync(file)
+              .then(query =>
+                request(endpoint, query)
+                  .then(result => {
+                    data = { ...data, ...result }
+                  })
+                  .catch(err => reject(err))
+              )
+              .catch(err => reject(`${file} does not exist`))
+          )
+        ).then(() => {
+          const content = JSON.stringify(data)
           const contentDigest = createContentDigest(content)
-
           const child = {
-            ...result,
+            ...data,
             id: `__graphql__${contentDigest}`,
             parent: null,
             children: [],
@@ -48,28 +57,45 @@ export const sourceNodes = async (
               contentDigest
             }
           }
-
-          createNode(child)
-          resolve()
+          resolve(createNode(child))
         })
-      })
+      }
     })
   })
 }
 
-export const getAllFiles = (dir, recursive = true) => {
-  if (recursive) {
-    return fs.readdirSync(dir).reduce((files, file) => {
-      const name = path.join(dir, file)
-      const isDirectory = fs.statSync(name).isDirectory()
-      return isDirectory ? [...files, ...getAllFiles(name)] : [...files, name]
-    }, [])
-  } else {
-    return fs
-      .readdirSync(dir)
-      .map(file => path.join(dir, file))
-      .filter(name => fs.statSync(name).isFile())
-  }
+const getAllFiles = (dir, recursive = true) =>
+  new Promise((resolve, reject) => {
+    let files = []
+    if (recursive) {
+      files = fs.readdirSync(dir).reduce((files, file) => {
+        const name = path.join(dir, file)
+        const isDirectory = fs.statSync(name).isDirectory()
+        return isDirectory ? [...files, ...getAllFiles(name)] : [...files, name]
+      }, [])
+    } else {
+      files = fs
+        .readdirSync(dir)
+        .map(file => path.join(dir, file))
+        .filter(name => fs.statSync(name).isFile())
+    }
+    resolve(files)
+  })
+
+fs.readFileAsync = function (filename) {
+  return new Promise(function (resolve, reject) {
+    try {
+      fs.readFile(filename, 'utf8', function (err, buffer) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(buffer)
+        }
+      })
+    } catch (err) {
+      reject(err)
+    }
+  })
 }
 
 const createContentDigest = content =>
