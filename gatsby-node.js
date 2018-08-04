@@ -5,155 +5,129 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.sourceNodes = undefined;
 
-var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
-
 var _graphqlRequest = require('graphql-request');
 
 var _fs = require('fs');
 
 var _fs2 = _interopRequireDefault(_fs);
 
-var _path = require('path');
+var _gatsbyNodeHelpers = require('gatsby-node-helpers');
 
-var _path2 = _interopRequireDefault(_path);
-
-var _crypto = require('crypto');
-
-var crypto = _interopRequireWildcard(_crypto);
-
-function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
+var _gatsbyNodeHelpers2 = _interopRequireDefault(_gatsbyNodeHelpers);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
 
 function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, arguments); return new Promise(function (resolve, reject) { function step(key, arg) { try { var info = gen[key](arg); var value = info.value; } catch (error) { reject(error); return; } if (info.done) { resolve(value); } else { return Promise.resolve(value).then(function (value) { step("next", value); }, function (err) { step("throw", err); }); } } return step("next"); }); }; }
 
 var sourceNodes = exports.sourceNodes = function () {
-  var _ref2 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee2(_ref, configOptions) {
+  var _ref2 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee3(_ref, configOptions) {
     var boundActionCreators = _ref.boundActionCreators,
         reporter = _ref.reporter;
-    var createNode, endpoint, queries, configs;
-    return regeneratorRuntime.wrap(function _callee2$(_context2) {
+
+    var createNode, endpoint, queries, _configOptions$typePr, typePrefix, _createNodeHelpers, createNodeFactory, client;
+
+    return regeneratorRuntime.wrap(function _callee3$(_context3) {
       while (1) {
-        switch (_context2.prev = _context2.next) {
+        switch (_context3.prev = _context3.next) {
           case 0:
             createNode = boundActionCreators.createNode;
-            endpoint = configOptions.endpoint, queries = configOptions.queries;
-            configs = [];
+            endpoint = configOptions.endpoint, queries = configOptions.queries, _configOptions$typePr = configOptions.typePrefix, typePrefix = _configOptions$typePr === undefined ? '' : _configOptions$typePr;
+            _createNodeHelpers = (0, _gatsbyNodeHelpers2.default)({
+              typePrefix: typePrefix
+            }), createNodeFactory = _createNodeHelpers.createNodeFactory;
+
+            // Gatsby adds a configOption that's not needed for this plugin, delete it
+
+            delete configOptions.plugins;
 
             if (endpoint) {
-              _context2.next = 5;
+              _context3.next = 6;
               break;
             }
 
             throw 'No endpoint was passed to plugin';
 
-          case 5:
-
-            if (Array.isArray(queries)) {
-              configs = queries;
-            } else {
-              configs = [queries];
-            }
-
-            // Gatsby adds a configOption that's not needed for this plugin, delete it
-            delete configOptions.plugins;
-
-            return _context2.abrupt('return', new Promise(function (resolve, reject) {
-              configs.map(function () {
-                var _ref4 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee(_ref3) {
-                  var type = _ref3.type,
-                      path = _ref3.path,
-                      recursive = _ref3.recursive;
-                  var data, files;
-                  return regeneratorRuntime.wrap(function _callee$(_context) {
+          case 6:
+            client = new _graphqlRequest.GraphQLClient(endpoint, null);
+            return _context3.abrupt('return', new Promise(function (resolve, reject) {
+              return queries.map(function () {
+                var _ref3 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee2(config) {
+                  var type, path, extractKey, transform, GQLNode, nodes;
+                  return regeneratorRuntime.wrap(function _callee2$(_context2) {
                     while (1) {
-                      switch (_context.prev = _context.next) {
+                      switch (_context2.prev = _context2.next) {
                         case 0:
-                          data = {};
-                          _context.next = 3;
-                          return getAllFiles(path, recursive);
+                          type = config.type, path = config.path, extractKey = config.extractKey, transform = config.transform;
+                          GQLNode = createNodeFactory(type, function (node) {
+                            return node;
+                          });
+                          _context2.next = 4;
+                          return _fs2.default.readFileAsync(path).then(function () {
+                            var _ref4 = _asyncToGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee(query) {
+                              var result, data;
+                              return regeneratorRuntime.wrap(function _callee$(_context) {
+                                while (1) {
+                                  switch (_context.prev = _context.next) {
+                                    case 0:
+                                      _context.next = 2;
+                                      return client.request(query);
 
-                        case 3:
-                          files = _context.sent;
+                                    case 2:
+                                      result = _context.sent;
+                                      data = extractKey ? result[extractKey] : result[type];
 
+                                      transform = transform ? transform : function (data) {
+                                        return data;
+                                      };
+                                      return _context.abrupt('return', data.map(transform).map(GQLNode));
 
-                          if (files) {
-                            Promise.all(files.map(function (file) {
-                              return _fs2.default.readFileAsync(file).then(function (query) {
-                                return (0, _graphqlRequest.request)(endpoint, query).then(function (result) {
-                                  data = _extends({}, data, result);
-                                }).catch(function (err) {
-                                  return reject(err);
-                                });
-                              }).catch(function (err) {
-                                return reject(file + ' does not exist');
-                              });
-                            })).then(function () {
-                              var content = JSON.stringify(data);
-                              var contentDigest = createContentDigest(content);
-                              var child = _extends({}, data, {
-                                id: '__graphql__' + contentDigest,
-                                parent: null,
-                                children: [],
-                                internal: {
-                                  type: type,
-                                  content: content,
-                                  contentDigest: contentDigest
+                                    case 6:
+                                    case 'end':
+                                      return _context.stop();
+                                  }
                                 }
-                              });
-                              resolve(createNode(child));
-                            });
-                          }
+                              }, _callee, undefined);
+                            }));
 
-                        case 5:
+                            return function (_x4) {
+                              return _ref4.apply(this, arguments);
+                            };
+                          }());
+
+                        case 4:
+                          nodes = _context2.sent;
+
+                          nodes.map(function (node) {
+                            return createNode(node);
+                          });
+                          resolve();
+
+                        case 7:
                         case 'end':
-                          return _context.stop();
+                          return _context2.stop();
                       }
                     }
-                  }, _callee, undefined);
+                  }, _callee2, undefined);
                 }));
 
                 return function (_x3) {
-                  return _ref4.apply(this, arguments);
+                  return _ref3.apply(this, arguments);
                 };
               }());
             }));
 
           case 8:
           case 'end':
-            return _context2.stop();
+            return _context3.stop();
         }
       }
-    }, _callee2, undefined);
+    }, _callee3, undefined);
   }));
 
   return function sourceNodes(_x, _x2) {
     return _ref2.apply(this, arguments);
   };
 }();
-
-var getAllFiles = function getAllFiles(dir) {
-  var recursive = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : true;
-  return new Promise(function (resolve, reject) {
-    var files = [];
-    if (recursive) {
-      files = _fs2.default.readdirSync(dir).reduce(function (files, file) {
-        var name = _path2.default.join(dir, file);
-        var isDirectory = _fs2.default.statSync(name).isDirectory();
-        return isDirectory ? [].concat(_toConsumableArray(files), _toConsumableArray(getAllFiles(name))) : [].concat(_toConsumableArray(files), [name]);
-      }, []);
-    } else {
-      files = _fs2.default.readdirSync(dir).map(function (file) {
-        return _path2.default.join(dir, file);
-      }).filter(function (name) {
-        return _fs2.default.statSync(name).isFile();
-      });
-    }
-    resolve(files);
-  });
-};
 
 _fs2.default.readFileAsync = function (filename) {
   return new Promise(function (resolve, reject) {
@@ -169,8 +143,4 @@ _fs2.default.readFileAsync = function (filename) {
       reject(err);
     }
   });
-};
-
-var createContentDigest = function createContentDigest(content) {
-  return crypto.createHash('md5').update(content).digest('hex');
 };

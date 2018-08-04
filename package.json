@@ -1,6 +1,6 @@
 {
   "name": "gatsby-plugin-graphql",
-  "version": "1.0.1",
+  "version": "2.0.0",
   "description": "Gatsby plugin for sourcing data from external GraphQl endpoint",
   "main": "index.js",
   "author": "Nathan Horrigan <NathHorrigan@gmail.com>",
@@ -18,6 +18,7 @@
     "prettier-standard": "^8.0.1"
   },
   "dependencies": {
+    "gatsby-node-helpers": "^0.3.0",
     "graphql-request": "^1.6.0"
   }
 }

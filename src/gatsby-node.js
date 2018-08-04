@@ -1,86 +1,41 @@
-import { request } from 'graphql-request'
+import { GraphQLClient, request } from 'graphql-request'
 import fs from 'fs'
-import path from 'path'
-import * as crypto from 'crypto'
+import createNodeHelpers from 'gatsby-node-helpers'
 
-export const sourceNodes = async (
-  { boundActionCreators, reporter },
-  configOptions
-) => {
+
+export const sourceNodes = async ({ boundActionCreators, reporter }, configOptions) => {
   const { createNode } = boundActionCreators
-  const { endpoint, queries } = configOptions
-  let configs = []
+  const { endpoint, queries, fetchOptions, typePrefix = '' } = configOptions
+  const { createNodeFactory } = createNodeHelpers({
+    typePrefix,
+  })
+
+  // Gatsby adds a configOption that's not needed for this plugin, delete it
+  delete configOptions.plugins
 
   if (!endpoint) {
     throw 'No endpoint was passed to plugin'
   }
 
-  if (Array.isArray(queries)) {
-    configs = queries
-  } else {
-    configs = [queries]
-  }
+  const client = new GraphQLClient(endpoint, fetchOptions)
 
-  // Gatsby adds a configOption that's not needed for this plugin, delete it
-  delete configOptions.plugins
+  return new Promise((resolve, reject) => queries.map(async config => {
+    let { type, path, extractKey, transform } = config
 
-  return new Promise((resolve, reject) => {
-    configs.map(async ({ type, path, recursive }) => {
-      let data = {}
-      const files = await getAllFiles(path, recursive)
-
-      if (files) {
-        Promise.all(
-          files.map(file =>
-            fs
-              .readFileAsync(file)
-              .then(query =>
-                request(endpoint, query)
-                  .then(result => {
-                    data = { ...data, ...result }
-                  })
-                  .catch(err => reject(err))
-              )
-              .catch(err => reject(`${file} does not exist`))
-          )
-        ).then(() => {
-          const content = JSON.stringify(data)
-          const contentDigest = createContentDigest(content)
-          const child = {
-            ...data,
-            id: `__graphql__${contentDigest}`,
-            parent: null,
-            children: [],
-            internal: {
-              type,
-              content,
-              contentDigest
-            }
-          }
-          resolve(createNode(child))
-        })
-      }
+    const GQLNode = createNodeFactory(type, node => node)
+  
+    const nodes = await fs.readFileAsync(path).then(async query => {
+      const result = await client.request(query)
+      let data = (extractKey) ? result[extractKey] : result[type]
+      transform = transform ? transform : data => data
+      return data
+        .map(transform)  
+        .map(GQLNode)
     })
-  })
+    nodes.map(node => createNode(node))
+    resolve()
+  }))
 }
-
-const getAllFiles = (dir, recursive = true) =>
-  new Promise((resolve, reject) => {
-    let files = []
-    if (recursive) {
-      files = fs.readdirSync(dir).reduce((files, file) => {
-        const name = path.join(dir, file)
-        const isDirectory = fs.statSync(name).isDirectory()
-        return isDirectory ? [...files, ...getAllFiles(name)] : [...files, name]
-      }, [])
-    } else {
-      files = fs
-        .readdirSync(dir)
-        .map(file => path.join(dir, file))
-        .filter(name => fs.statSync(name).isFile())
-    }
-    resolve(files)
-  })
 
 fs.readFileAsync = function (filename) {
   return new Promise(function (resolve, reject) {
@@ -97,9 +52,3 @@ fs.readFileAsync = function (filename) {
     }
   })
 }
-
-const createContentDigest = content =>
-  crypto
-    .createHash('md5')
-    .update(content)
-    .digest('hex')
