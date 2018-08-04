@@ -53,6 +53,7 @@ module.exports = {
       options: {
         endpoint: 'https://api.graphcms.com/simple/v1/swapi',
         typePrefix: '', // OPTIONAL: set a prefix for each GQL type.
+        fetchOptions: {}, // OPTIONAL: Custom options for fetch
         queries: [{
           type: 'persons',
           path: `${__dirname}/src/queries/persons.graphql`,
