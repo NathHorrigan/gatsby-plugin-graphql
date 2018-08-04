@@ -91,7 +91,7 @@ export default ({data: { starwars }}) => {
       <div>
         <h2>Starwars Characters</h2>
         <ul>
-          {starwars.allPersons.edges.nodes.map(person => (
+          {starwars.allPersons.edges.map(person => (
             <li>{person.name}</li>
           ))}
         </ul>
